@@ -1,0 +1,8 @@
+{
+  "influxdb_protocol":"https",
+  "influxdb_addr": "localhost",
+  "influxdb_port": 8086,
+  "influxdb_database": "KhronosDB",
+  "influxdb_username": "root",
+  "influxdb_password": "root"
+}

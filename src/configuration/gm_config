@@ -1,0 +1,13 @@
+{
+
+  "gateway":{
+    "address": "192.168.14.199",
+    "port":8889},
+
+  "gateway_manager":{
+    "address": "127.0.0.1",
+    "port": 5000,
+    "discovery_refresh_period":60
+  }
+
+}
