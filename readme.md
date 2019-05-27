@@ -54,4 +54,5 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 [1]. Waiting for proceedings. 
 
-
+## Data Sets
+The data sets used for the evaluation of Khronos, discussed in [1], can be downloaded from: https://ufile.io/g3tvehcw
