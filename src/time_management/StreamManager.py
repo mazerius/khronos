@@ -1,5 +1,5 @@
 
-from time_management.Stream import Stream
+from src.time_management.Stream import Stream
 import datetime
 
 # Manages Stream objects for sensor data sources in the CPS infrastructure.

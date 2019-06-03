@@ -1,5 +1,5 @@
 import requests
-from cps_communication.Publisher import *
+from src.cps_communication.Publisher import *
 
 ## Responsible for communication between the GatewayManager and internal components of Khronos.
 class NetworkMonitor:

@@ -1,7 +1,7 @@
 from multiprocessing import Process
 import time
-from application_management.CompletenessConstraint import CompletenessConstraint
-from application_management.StaticTimeout import StaticTimeout
+from src.application_management.CompletenessConstraint import CompletenessConstraint
+from src.application_management.StaticTimeout import StaticTimeout
 import datetime
 
 # invoked when a process times out, associated with an individual packet arrival

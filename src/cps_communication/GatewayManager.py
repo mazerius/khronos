@@ -10,8 +10,8 @@ import websocket
 from flask import Flask, request
 from flask_restful import Resource, Api
 from requests.exceptions import ConnectionError
-from storage.InfluxDBWriter import *
-from time_management.StreamManager import *
+from src.storage.InfluxDBWriter import *
+from src.time_management.StreamManager import *
 
 
 

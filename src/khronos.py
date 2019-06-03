@@ -1,13 +1,13 @@
 ### Main script to start up Khronos.
 
-from cps_communication.DataParser import *
-from storage.InfluxDBWriter import *
-from time_management.Scheduler import *
-from application_management.Updater import *
+from src.cps_communication.DataParser import *
+from src.storage.InfluxDBWriter import *
+from src.time_management.Scheduler import *
+from src.application_management.Updater import *
 from flask import Flask, request
 from flask_restful import Resource, Api
 import Pyro4
-from cps_communication.NetworkMonitor import *
+from src.cps_communication.NetworkMonitor import *
 import datetime
 
 
