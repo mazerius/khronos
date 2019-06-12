@@ -5,8 +5,17 @@
     "address": "127.0.0.1",
     "port":4999},
 
+  "application_management":{
+    "websocket_on_next_address": "127.0.0.1",
+    "websocket_on_next_port": "13254",
+    "websocket_on_timeout_address": "127.0.0.1",
+    "websocket_on_timeout_port": "13255",
+    "websocket_on_violation_address": "127.0.0.1",
+    "websocket_on_violation_port": "13256"
+  },
+
   "prediction_technique":{
-    "window_size": 100,
+    "window_size": 10,
     "K": {"0.1": 0, "0.2": 0.1, "0.3": 0.6, "0.4": 1, "0.5": 1.2, "0.6": 1.4, "0.7": 2, "0.8": 2.8, "0.9": 4.6, "1.0": 280},
     "alpha": 0.875,
     "beta":  0.75

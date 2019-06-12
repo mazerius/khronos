@@ -2,7 +2,7 @@
 
 import json
 
-class Publisher:
+class DataSource:
 
     # currently only supports unary/binary operations.
     def __init__(self, id, name, datatype, unit):

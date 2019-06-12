@@ -1,14 +1,36 @@
-from multiprocessing import Process
-import time
-from src.application_management.CompletenessConstraint import CompletenessConstraint
-from src.application_management.StaticTimeout import StaticTimeout
 import datetime
+import time
+from multiprocessing import Process
+import json
+from src.application_management.CompletenessConstraint import CompletenessConstraint
+
+from src.application_management.StaticTimeout import StaticTimeout
+
+from src.application_management.Publisher import Publisher
 
 # invoked when a process times out, associated with an individual packet arrival
-def onTimeout(remoteObject, timeout, completeness, updater):
-    time.sleep(float(timeout))
+# requirement is a static timeout or constraint
+#TODO: add onViolation if below constraint != None and < constraint.getThreshold()
+#TODO: requirement make superclass
+def onTimeout(requirement, completeness,  timeout, updater, publisher, below_constraint = None):
+    time.sleep(float(timeout[0]))
     print(datetime.datetime.now(), '| [Scheduler]:', 'Timeout occurred prior packet arrival. Invoking onTimeout() on Updater.')
-    updater.onTimeout(remoteObject, timeout, completeness)
+    if below_constraint != None and below_constraint[requirement.getCompleteness()] != None:
+        if below_constraint[requirement.getCompleteness()] < requirement.getThreshold():
+            if requirement.getRemoteObject() != None:
+                updater.onViolation(requirement.getRemoteObject(), completeness, timeout)
+            else:
+                publisher.onViolation(requirement.getID(), requirement.getDeviceKey(), None, completeness, timeout)
+        else:
+            if requirement.getRemoteObject() != None:
+                updater.onTimeout(requirement.getRemoteObject(), completeness, timeout)
+            else:
+                publisher.onTimeout(requirement.getID(), requirement.getDeviceKey(), completeness, timeout)
+    else:
+        if requirement.getRemoteObject() != None:
+            updater.onTimeout(requirement.getRemoteObject(), completeness, timeout)
+        else:
+            publisher.onTimeout(requirement.getID(), requirement.getDeviceKey(), completeness, timeout)
 
 # Responsible for coordinating callback methods of (remote) application objects,
 # based on packet arrival times and timeouts.
@@ -23,6 +45,7 @@ class Scheduler:
 
     def __init__(self, updater, data_parser, network_monitor):
         self.updater = updater
+        self.publisher = Publisher()
         self.data_parser = data_parser
         self.data_parser.setScheduler(self)
         self.network_monitor = network_monitor
@@ -33,6 +56,8 @@ class Scheduler:
         self.timeouts = []
         # StaticTimeout.id : process
         self.timeout_to_process = dict()
+        # used to determine ID of registered constraints / static timeouts.
+        self.registration_id = 0
 
 
     def getUpdater(self):
@@ -42,61 +67,99 @@ class Scheduler:
         return self.data_parser
 
     # register completeness constraint for device key
-    def registerCompleteness(self, device, pid1, pid2, measurement, remote_object, completeness_constraint, threshold):
-        constraint = CompletenessConstraint(self.constraint_counter, pid1, pid2, device, measurement, completeness_constraint, threshold, remote_object)
+    # returns unique ID to identify websocket notifications for this registration
+    def registerCompleteness(self, device, pid1, pid2, measurement, completeness_constraint, threshold, remote_object=None):
+        constraint = CompletenessConstraint(self.registration_id, pid1, pid2, device, measurement, completeness_constraint, threshold, remote_object)
         self.constraints.append(constraint)
-        self.constraint_to_process[self.constraint_counter] = None
+        self.constraint_to_process[self.registration_id] = None
         key = pid1 + '/' + pid2 + ':' + device + '|' + measurement
         self.network_monitor.trackCompletenessConstraintForStream(key, completeness_constraint)
-        self.network_monitor.activatePublisher(key)
-        self.constraint_counter += 1
+        self.network_monitor.activateDataSource(key)
+        #self.constraint_counter += 1
+        self.registration_id +=1
+        return self.registration_id - 1
 
     # register static timeout for device key
-    def registerTimeOut(self, device, pid1, pid2, measurement, remote_object, timeout):
-        static_timeout = StaticTimeout(self.static_timeout_counter, pid1, pid2, device, measurement, timeout, remote_object)
+    # returns unique ID to identify websocket notifications for this registration
+    def registerTimeOut(self, device, pid1, pid2, measurement, timeout, remote_object=None):
+        static_timeout = StaticTimeout(self.registration_id, pid1, pid2, device, measurement, timeout, remote_object)
         key = pid1 + '/' + pid2 + ':' + device + '|' + measurement
         self.timeouts.append(static_timeout)
-        self.timeout_to_process[self.static_timeout_counter] = None
+        self.timeout_to_process[self.registration_id] = None
         self.network_monitor.trackStaticTimeoutForStream(key, timeout)
-        self.network_monitor.activatePublisher(key)
-        self.static_timeout_counter += 1
-
+        self.network_monitor.activateDataSource(key)
+        #self.static_timeout_counter += 1
+        self.registration_id +=1
+        return self.registration_id - 1
 
 
 
     # when timeout has occured, the scheduler waits for the next packet arrival before restarting a new timeout process.
-    def receiveData(self, arrivalTime, timeGenerated, key, value, next_timeout, achieved_completeness_constraints, below_constraint, achieved_completeness_timeouts):
-        print(datetime.datetime.now(), '| [Scheduler]:', 'received data from:', key, ', at', arrivalTime, ' with timestamp', timeGenerated)
+    def receiveData(self, arrivalTime, timeGenerated, key, value, next_timeout, achieved_completeness_constraints, above_constraint, achieved_completeness_timeouts):
+        print(datetime.datetime.now(), '| [Scheduler]:', 'Received data from:', key, ', at', arrivalTime, ' with timestamp generated', timeGenerated)
         # check registered completeness constraints that are linked to received device data
         for constraint in self.constraints:
             if constraint.sameKey(key):
                 print(datetime.datetime.now(), '| [Scheduler]:', 'ApplicationConstraint', constraint.getDeviceKey())
-                process = self.constraint_to_process[constraint.id]
+                process = self.constraint_to_process[constraint.getID()]
                 if process != None:
                     if process.is_alive():
                         print(datetime.datetime.now(), '| [Scheduler]: packet received prior timeout. Terminating timeout Process.')
-                        self.constraint_to_process[constraint.id].terminate()
+                        self.constraint_to_process[constraint.getID()].terminate()
                         # check if violation
-                        print(datetime.datetime.now(), '| [Scheduler]:', 'below_constraint[', constraint.getCompleteness(), ']:', below_constraint[constraint.getCompleteness()])
-                        if below_constraint[constraint.getCompleteness()] != None:
-                            if below_constraint[constraint.getCompleteness()] < constraint.getThreshold():
-                                print(datetime.datetime.now(), '| [Scheduler]: constraint violation detected. Invoking onViolation() on Updater.')
-                                self.updater.onViolation(constraint.getRemoteObject(), value, next_timeout[constraint.getCompleteness()], achieved_completeness_constraints[constraint.getCompleteness()])
+                        if above_constraint[constraint.getCompleteness()] != None:
+                            if above_constraint[constraint.getCompleteness()] < constraint.getThreshold():
+                                if constraint.getRemoteObject() != None:
+                                    print(datetime.datetime.now(),
+                                          '| [Scheduler]: constraint violation detected. Invoking onViolation() on Updater.')
+                                    self.updater.onViolation(constraint.getRemoteObject(), value, achieved_completeness_constraints[constraint.getCompleteness()], next_timeout[constraint.getCompleteness()])
+                                else:
+                                    print(datetime.datetime.now(),
+                                          '| [Scheduler]: constraint violation detected. Invoking onViolation() on Publisher.')
+                                    self.publisher.onViolation(constraint.getID(), key, value, achieved_completeness_constraints[constraint.getCompleteness()],  next_timeout[constraint.getCompleteness()])
                             else:
-                                print(datetime.datetime.now(), '| [Scheduler]: constraint satisfaction. Invoking onNext() on Updater.')
-                                self.updater.onNext(constraint.getRemoteObject(), value, next_timeout[constraint.getCompleteness()], achieved_completeness_constraints[constraint.getCompleteness()])
-
+                                if constraint.getRemoteObject() != None:
+                                    print(datetime.datetime.now(),
+                                          '| [Scheduler]: constraint satisfaction. Invoking onNext() on Updater.')
+                                    self.updater.onNext(constraint.getRemoteObject(), value, achieved_completeness_constraints[constraint.getCompleteness()],next_timeout[constraint.getCompleteness()])
+                                else:
+                                    print(datetime.datetime.now(),
+                                          '| [Scheduler]: constraint satisfaction. Invoking onNext() on Publisher.')
+                                    self.publisher.onNext(constraint.getID(), key, value, achieved_completeness_constraints[constraint.getCompleteness()], next_timeout[constraint.getCompleteness()])
+                        else:
+                            if constraint.getRemoteObject() != None:
+                                print(datetime.datetime.now(),
+                                      '| [Scheduler]: constraint satisfaction. Invoking onNext() on Updater.')
+                                self.updater.onNext(constraint.getRemoteObject(), value,
+                                                    achieved_completeness_constraints[constraint.getCompleteness()],
+                                                    next_timeout[constraint.getCompleteness()])
+                            else:
+                                print(datetime.datetime.now(),
+                                      '| [Scheduler]: constraint satisfaction. Invoking onNext() on Publisher.')
+                                self.publisher.onNext(constraint.getID(), key, value,
+                                                      achieved_completeness_constraints[constraint.getCompleteness()],
+                                                      next_timeout[constraint.getCompleteness()])
                 else:
-                    print(datetime.datetime.now(), '| [Scheduler]: constraint satisfaction. Invoking onNext() on Updater.')
-                    self.updater.onNext(constraint.getRemoteObject(), value,
-                                        next_timeout[constraint.getCompleteness()],
-                                        achieved_completeness_constraints[constraint.getCompleteness()])
+                    if constraint.getRemoteObject() != None:
+                        print(datetime.datetime.now(),
+                              '| [Scheduler]: constraint satisfaction. Invoking onNext() on Updater.')
+                        print('next timeout',next_timeout[constraint.getCompleteness()])
+                        self.updater.onNext(constraint.getRemoteObject(), value,
+                                        achieved_completeness_constraints[constraint.getCompleteness()],
+                                        next_timeout[constraint.getCompleteness()])
+                    else:
+                        print(datetime.datetime.now(),
+                              '| [Scheduler]: constraint satisfaction. Invoking onNext() on Publisher.')
+
+                        self.publisher.onNext(constraint.getID(), key, value,
+                                          achieved_completeness_constraints[constraint.getCompleteness()], next_timeout[constraint.getCompleteness()])
+
                 completeness = constraint.getCompleteness()
                 print(datetime.datetime.now(), '| [Scheduler]: Initiating new timeout Process with a timeout of', next_timeout[completeness], 'seconds.')
-                p = Process(target=onTimeout, args=(constraint.getRemoteObject(), next_timeout[completeness],
-                                                achieved_completeness_constraints[completeness],
-                                                self.updater))
-                self.constraint_to_process[constraint.id] = p
+                p = Process(target=onTimeout, args=(constraint,
+                                                    achieved_completeness_constraints[completeness], next_timeout[completeness],
+                                                    self.updater, self.publisher, above_constraint))
+                self.constraint_to_process[constraint.getID()] = p
                 p.start()
 
 
@@ -105,25 +168,37 @@ class Scheduler:
         for st in self.timeouts:
             if st.sameKey(key):
                 print(datetime.datetime.now(), '| [Scheduler]:', 'StaticTimeout', st.getDeviceKey())
-                process = self.timeout_to_process[st.id]
+                process = self.timeout_to_process[st.getID()]
                 if process != None:
                     # if timeout hasn't occured yet, stop timer and call on_next
                     if process.is_alive():
                         print(datetime.datetime.now(), '| [Scheduler]: packet received prior timeout. Terminating timeout Process.')
-                        self.timeout_to_process[st.id].terminate()
-                        print(datetime.datetime.now(), '| [Scheduler]: Invoking onNext() on Updater.')
-                        self.updater.onNext(st.getRemoteObject(), value,
-                                            st.getTimeout(),
-                                            achieved_completeness_timeouts[st.getTimeout()])
+                        self.timeout_to_process[st.getID()].terminate()
+                        if st.getRemoteObject() != None:
+                            print(datetime.datetime.now(), '| [Scheduler]: Invoking onNext() on Updater.')
+                            self.updater.onNext(st.getRemoteObject(), value,
+                                            achieved_completeness_timeouts[st.getTimeout()],
+                                            st.getTimeout())
+                        else:
+                            print(datetime.datetime.now(), '| [Scheduler]: Invoking onNext() on Publisher.')
+                            self.publisher.onNext(st.getID(), key, value,
+                                              achieved_completeness_constraints[constraint.getCompleteness()],  next_timeout[constraint.getCompleteness()])
+
                 else:
                     # first packet arrival, no process yet
-                    print(datetime.datetime.now(), '| [Scheduler]: Invoking onNext() on Updater.')
-                    self.updater.onNext(st.getRemoteObject(), value,
-                                        st.getTimeout(),
-                                        achieved_completeness_timeouts[st.getTimeout()])
+                    if st.getRemoteObject()!=None:
+                        print(datetime.datetime.now(), '| [Scheduler]: Invoking onNext() on Updater.')
+                        self.updater.onNext(st.getRemoteObject(), value,
+                                        achieved_completeness_timeouts[st.getTimeout()],
+                                        st.getTimeout())
+                    else:
+                        print(datetime.datetime.now(), '| [Scheduler]: Invoking onNext() on Publisher.')
+                        self.publisher.onNext(st.getID(), key, value, next_timeout[constraint.getCompleteness()],
+                                          achieved_completeness_constraints[constraint.getCompleteness()])
+
                 print(datetime.datetime.now(), '| [Scheduler]: Initiating new timeout Process with a timeout of', st.getTimeout(), 'seconds.')
-                p = Process(target=onTimeout, args=(st.getRemoteObject(), st.getTimeout(), achieved_completeness_timeouts[st.getTimeout()], self.updater))
-                self.timeout_to_process[st.id] = p
+                p = Process(target=onTimeout, args=(st, achieved_completeness_timeouts[st.getTimeout()], st.getTimeout(), self.updater, self.publisher))
+                self.timeout_to_process[st.getID()] = p
                 p.start()
 
 

@@ -1,19 +1,19 @@
 
 import re
 import ssl
+import sys
 import threading
 import time
 from json import dumps
-import sys
+
 import requests
 import websocket
 from flask import Flask, request
 from flask_restful import Resource, Api
 from requests.exceptions import ConnectionError
-from src.storage.InfluxDBWriter import *
 from src.time_management.StreamManager import *
 
-
+from src.storage.InfluxDBWriter import *
 
 ############# Load configs ###############
 
@@ -58,8 +58,8 @@ class SetEncoder(json.JSONEncoder):
 
 
 ### maintains CPS devices whose data should be forwarded to Khronos
-publishers = set()
-publishers_lock = threading.Lock()
+data_sources = set()
+data_sources_lock = threading.Lock()
 
 
 # Initializing time managemente dependencies.
@@ -80,9 +80,9 @@ class webSocketThread (threading.Thread):
       print (datetime.datetime.now(),"| Exiting " + self.name)
 
 
-# checks if given peripheral is a publisher
-def checkPeripheralInPublishers(peripheral, mac):
-    for publisher in publishers:
+# checks if given peripheral is a data source
+def checkPeripheralInDataSources(peripheral, mac):
+    for publisher in data_sources:
         if ((peripheral + ':' + mac) in publisher):
             return True
     return False
@@ -107,25 +107,25 @@ def connectToWebSocket():
                    peripheral_id = result_json['contents']['identifier']
                    # if peripheral has already been discovered
                    if not stream_manager.getStreamByID(peripheral_id, mac) == None:
-                       thisPeripheral = stream_manager.getStreamByID(peripheral_id, mac)
+                       thisStream = stream_manager.getStreamByID(peripheral_id, mac)
                        timestamp = result_json['contents']['timestamp']
                        time_to_write = datetime.datetime.utcfromtimestamp(1558356626234250/1000000.).strftime('%Y-%m-%dT%H:%M:%S.%f')
                        # update timeliness / completeness stats
-                       ready_to_be_published = thisPeripheral.increment(timestamp, time_to_write)
+                       ready_to_be_published = thisStream.increment(timestamp, time_to_write)
                        if (ready_to_be_published):
                         # construct payload to send to Khronos
-                        result_json['next-timeout'] = thisPeripheral.getNextTimeoutsForConstraints()
-                        result_json['achieved-completeness-constraints'] = thisPeripheral.getAchievedCompletenessForConstraints()
-                        result_json['below-constraint'] = thisPeripheral.getBelowConstraintRatioForConstraints()
-                        result_json['achieved-completeness-timeouts'] = thisPeripheral.getTimeoutToAchievedCompleteness()
+                        result_json['next-timeout'] = thisStream.getNextTimeoutsForConstraints()
+                        result_json['achieved-completeness-constraints'] = thisStream.getAchievedCompletenessForConstraints()
+                        result_json['above-constraint'] = thisStream.getAboveConstraintForConstraints()
+                        result_json['achieved-completeness-timeouts'] = thisStream.getAchievedCompletenessForStaticTimeouts()
                         # synchronized access to shared resource
-                        with publishers_lock:
+                        with data_sources_lock:
                           # if the peripheral is in publishers, received data should be forwarded to Khronos
-                          if checkPeripheralInPublishers(result_json['contents']['identifier'], result_json['contents']['mac']):
+                          if checkPeripheralInDataSources(result_json['contents']['identifier'], result_json['contents']['mac']):
                                print(datetime.datetime.now(), "| [GatewayManager]: Forwarding received sensor data", result_json, "to Khronos.")
                                requests.put(khronos_url + '/publish', data=json.dumps(result_json), headers = headers)
                    else:
-                       print(datetime.datetime.now(), "| [GatewayManager]: peripheral:", + peripheral_id + ' for device mac:' + mac + 'does not exist.')
+                       print(datetime.datetime.now(), "| [GatewayManager]: peripheral:" + peripheral_id + " for device mac:" + mac + "does not exist.")
         except ConnectionError as e:
             print(e)
             print(datetime.datetime.now(), "| [GatewayManager]: ConnectionError occured. Attempting to reconnect...")
@@ -300,25 +300,25 @@ def runRESTfulAPI():
             response = requests.put(base_url + '/' + device_mac + '/peripherals' + '/' + pid1 + '/' + pid2 + '/actuate', contents)
             return response.text
 
-    # returns the registered publishers (devices assosciated with completeness constraints or
-    class PublishersAPI(Resource):
+    # returns the registered data sources
+    class DataSourcesAPI(Resource):
         def get(self):
-            with publishers_lock:
-                data = dumps(publishers,cls=SetEncoder)
+            with data_sources_lock:
+                data = dumps(data_sources, cls=SetEncoder)
             return data, 200
 
-    ## enables Khronos to activate publishers -> corresponding sensor_data will now be forwarded.
-    class ActivatePublisherAPI(Resource):
+    ## enables Khronos to activate data sources -> corresponding sensor_data will now be forwarded.
+    class ActivateDataSourceAPI(Resource):
         def put(self, pid1, pid2, mac, measurement):
             device = pid1 + '/' + pid2 + ':' + mac + '|' + measurement
             if (not checkMAC(mac)):
                 print(datetime.datetime.now(), '| [GatewayManager]:', mac, 'is not a valid MAC address.')
                 return mac + 'is invalid MAC address.', 400
             else:
-                with publishers_lock:
-                    if not device in publishers:
+                with data_sources_lock:
+                    if not device in data_sources:
                         print(datetime.datetime.now(), '| [GatewayManager]: activated', device, 'successfully.')
-                        publishers.add(device)
+                        data_sources.add(device)
                         return device+ 'activated successfully.', 200
                     else:
                         print(datetime.datetime.now(), '| [GatewayManager]:', device, 'is already activated.')
@@ -347,13 +347,13 @@ def runRESTfulAPI():
     # completeness / timeliness resources
     api.add_resource(TrackStaticTimeoutAPI, '/trackStaticTimeout/<string:device_mac>/<string:pid1>/<string:pid2>/<string:timeout>')
     api.add_resource(TrackCompletenessConstraintAPI, '/trackCompletenessConstraint/<string:device_mac>/<string:pid1>/<string:pid2>/<string:constraint>')
-    api.add_resource(PublishersAPI, '/publishers')
-    api.add_resource(ActivatePublisherAPI, '/activate-publisher/<string:pid1>/<string:pid2>/<string:mac>/<string:measurement>')
+    api.add_resource(DataSourcesAPI, '/publishers')
+    api.add_resource(ActivateDataSourceAPI, '/activate-publisher/<string:pid1>/<string:pid2>/<string:mac>/<string:measurement>')
 
 
     # CPS cps_communication / devices resources
     api.add_resource(DevicesAPI, '/devices')
-    api.add_resource(NetworkAPI, '/cps_communication')
+    api.add_resource(NetworkAPI, '/network')
     api.add_resource(PeripheralsAPI, '/peripherals/<string:device_mac>')
     api.add_resource(PeripheralAPI, '/peripheral/<string:device_mac>/<string:pid1>/<string:pid2>')
     api.add_resource(PeripheralRateAPI, '/peripheral_rate/<string:device_mac>/<string:pid1>/<string:pid2>')
