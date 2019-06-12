@@ -1,6 +1,8 @@
 
-from src.time_management.Stream import Stream
 import datetime
+
+from src.time_management.Stream import Stream
+
 
 # Manages Stream objects for sensor data sources in the CPS infrastructure.
 class StreamManager:
@@ -36,13 +38,13 @@ class StreamManager:
 
     # track Completeness values for static imeout
     def trackStaticTimeout(self, peripheral_id, device_id, timeout):
-        print(datetime.datetime.now(), '| [StreamManager]: tracking statime timeout for', peripheral_id + ':' + device_id, 'with value', timeout)
+        print(datetime.datetime.now(), '| [StreamManager]: tracking completeness for static timeout for', peripheral_id + ':' + device_id, 'with value', timeout)
         stream = self.getStreamByID(peripheral_id, device_id)
-        stream.trackCompleteness(timeout)
+        stream.trackCompletenessForTimeout(timeout)
 
     # track TimeWindow values for given completeness constraint
     def trackCompletenessConstraint(self, peripheral_id, device_id, constraint):
-        print(datetime.datetime.now(), '| [StreamManager]: tracking completeness constraint for', peripheral_id + ':' + device_id, 'with value', constraint)
+        print(datetime.datetime.now(), '| [StreamManager]: tracking timeout for completeness constraint for', peripheral_id + ':' + device_id, 'with value', constraint)
         stream = self.getStreamByID(peripheral_id, device_id)
-        stream.trackTimeWindow(constraint)
+        stream.trackTimeoutForCompleteness(constraint)
 

@@ -15,11 +15,11 @@ import os
 class Client(object):
 
     # should be invoked when packets arrive within given constraints. Value is the value of the sensor data.
-    def on_next(self, value, timeout, completeness):
+    def on_next(self, value, completeness, timeout):
         print(str(datetime.datetime.now()), "on_next with value:", value, ', timeout:', timeout, 'and completeness', completeness)
 
     # should be invoked when packets arrive outside given constraints. Value is the value of the sensor data.
-    def on_timeout(self, timeout, completeness):
+    def on_timeout(self, completeness, timeout):
         print(str(datetime.datetime.now()), "on_timeout with timeout:", timeout, ', completeness', completeness)
 
 
@@ -82,4 +82,5 @@ mac = example_device['id'].split(':')[1].split('|')[0]
 print('Registering Timeout for Discovered Device' + pid1 + '/' + pid2 + ':' + mac + '|' + measurement +  '...' )
 
 # registers static timeout for selected device to Khronos.
-requests.put(khronos_url + '/registerTimeout' + '/' + pid1 + '/' + pid2 + '/' + mac + '/' + measurement + '/' + str(timeout) + '/'+ uri.asString().strip())
+response = requests.put(khronos_url + '/registerTimeoutRMI' + '/' + pid1 + '/' + pid2 + '/' + mac + '/' + measurement + '/' + str(timeout) + '/'+ uri.asString().strip())
+print('ID:', response.text)
