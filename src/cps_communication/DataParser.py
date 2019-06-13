@@ -15,8 +15,9 @@ class DataParser:
 
     # invoked by GatewayManager through Khronos API whenever sensor data is published
     def receiveData(self,data):
-        arrival_time = datetime.datetime.now()
+        arrival_time = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
         print(datetime.datetime.now(), '| [DataParser]: Received sensor data:', data, 'at', arrival_time)
+
         for item in data['contents']['data']:
             measurement = item['measurement']
             value = item['value']

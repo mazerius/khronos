@@ -95,8 +95,8 @@ class Scheduler:
 
 
     # when timeout has occured, the scheduler waits for the next packet arrival before restarting a new timeout process.
-    def receiveData(self, arrivalTime, timeGenerated, key, value, next_timeout, achieved_completeness_constraints, above_constraint, achieved_completeness_timeouts):
-        print(datetime.datetime.now(), '| [Scheduler]:', 'Received data from:', key, ', at', arrivalTime, ' with timestamp generated', timeGenerated)
+    def receiveData(self, arrival_time, timeGenerated, key, value, next_timeout, achieved_completeness_constraints, above_constraint, achieved_completeness_timeouts):
+        print(datetime.datetime.now(), '| [Scheduler]:', 'Received data from:', key, ', at', arrival_time, ' with timestamp generated', timeGenerated)
         # check registered completeness constraints that are linked to received device data
         for constraint in self.constraints:
             if constraint.sameKey(key):
@@ -182,7 +182,7 @@ class Scheduler:
                         else:
                             print(datetime.datetime.now(), '| [Scheduler]: Invoking onNext() on Publisher.')
                             self.publisher.onNext(st.getID(), key, value,
-                                              achieved_completeness_constraints[constraint.getCompleteness()],  next_timeout[constraint.getCompleteness()])
+                                              achieved_completeness_timeouts[st.getTimeout()],  st.getTimeout())
 
                 else:
                     # first packet arrival, no process yet
@@ -193,11 +193,11 @@ class Scheduler:
                                         st.getTimeout())
                     else:
                         print(datetime.datetime.now(), '| [Scheduler]: Invoking onNext() on Publisher.')
-                        self.publisher.onNext(st.getID(), key, value, next_timeout[constraint.getCompleteness()],
-                                          achieved_completeness_constraints[constraint.getCompleteness()])
+                        self.publisher.onNext(st.getID(), key, value,
+                                          achieved_completeness_timeouts[st.getTimeout()], st.getTimeout())
 
                 print(datetime.datetime.now(), '| [Scheduler]: Initiating new timeout Process with a timeout of', st.getTimeout(), 'seconds.')
-                p = Process(target=onTimeout, args=(st, achieved_completeness_timeouts[st.getTimeout()], st.getTimeout(), self.updater, self.publisher))
+                p = Process(target=onTimeout, args=(st, achieved_completeness_timeouts[st.getTimeout()], (st.getTimeout(), arrival_time), self.updater, self.publisher))
                 self.timeout_to_process[st.getID()] = p
                 p.start()
 
