@@ -23,5 +23,5 @@ class DataParser:
             value = item['value']
             key = data['contents']['identifier'] + ':' + data['contents']['mac'] + "|" + measurement
             time_generated = math.ceil(item['timestamp'] / 10 ** 6)
-            self.scheduler.receiveData(arrival_time, time_generated, key, value, data['next-timeout'], data['achieved-completeness-constraints'], data['above-constraint'], data['achieved-completeness-timeouts'])
+            self.scheduler.receiveData(arrival_time, time_generated, key, value, data['next-timeout'], data['achieved-completeness-constraints'], data['above-constraint'], data['achieved-completeness-timeouts'], data['timestamp'])
 

@@ -17,21 +17,21 @@ class Client(object):
     # value is the value of the sensor data.
     # timeout is the value of the next timeout.
     # completeness is the value of the currently achieved completeness.
-    def on_next(self, value, completeness, timeout):
-        print(str(datetime.datetime.now()), "on_next with value:", value, ', timeout:', timeout, 'and completeness', completeness)
+    def on_next(self, value, completeness, timeout, timestamp):
+        print(str(datetime.datetime.now()), "on_next with value:", value, ', timeout:', timeout, 'and completeness', completeness, 'at timestamp', timestamp)
 
     # invoked when timeout occurs before packet arrival.
     # value is the value of the sensor data.
     # timeout is the value of the next timeout.
     # completeness is the value of the currently achieved completeness.
-    def on_timeout(self, completeness, timeout):
-        print(str(datetime.datetime.now()), "on_timeout with timeout:", timeout, ', completeness', completeness)
+    def on_timeout(self, completeness, timeout, timestamp):
+        print(str(datetime.datetime.now()), "on_timeout with timeout:", timeout, ', completeness', completeness, 'at timestamp', timestamp)
 
     # invoked when constraint is violated. Value is the value of the sensor data (if any).
     # timeout is the value of the next timeout.
     # completeness is the value of the currently achieved completeness.
-    def on_violation(self, value, completeness, timeout):
-        print(str(datetime.datetime.now()), "on_violation with value:", value, ', timeout:', timeout, 'and completeness', completeness)
+    def on_violation(self, value, completeness, timeout, timestamp):
+        print(str(datetime.datetime.now()), "on_violation with value:", value, ', timeout:', timeout, 'and completeness', completeness, 'at timestamp', timestamp)
 
 
 

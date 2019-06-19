@@ -118,6 +118,7 @@ def connectToWebSocket():
                         result_json['achieved-completeness-constraints'] = thisStream.getAchievedCompletenessForConstraints()
                         result_json['above-constraint'] = thisStream.getAboveConstraintForConstraints()
                         result_json['achieved-completeness-timeouts'] = thisStream.getAchievedCompletenessForStaticTimeouts()
+                        result_json['timestamp'] = thisStream.getLastTimestamp()
                         # synchronized access to shared resource
                         with data_sources_lock:
                           # if the peripheral is in publishers, received data should be forwarded to Khronos

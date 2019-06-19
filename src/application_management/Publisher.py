@@ -37,22 +37,22 @@ class Publisher:
         #
 
     # invokes the on_next callback of the remote object
-    def onNext(self, id, key, value, completeness, timeout):
-        message = {'id': id, 'data_source': key, 'value': value, 'completeness': completeness, 'timeOut': timeout}
+    def onNext(self, id, key, value, completeness, timeout, timestamp):
+        message = {'id': id, 'data_source': key, 'value': value, 'completeness': completeness, 'timeOut': timeout, 'timestamp': timestamp}
         self.ws_on_next.publish(json.dumps(message))
 
     # invokes the on_timeout callback of the remote object
-    def onTimeout(self, id, key, completeness, timeout):
-        message = {'id': id, 'data_source': key, 'completeness': completeness, 'timeOut': timeout}
+    def onTimeout(self, id, key, completeness, timeout, timestamp):
+        message = {'id': id, 'data_source': key, 'value': None, 'completeness': completeness, 'timeOut': timeout, 'timestamp': timestamp}
         self.ws_on_timeout.publish(json.dumps(message))
 
     # invokes the on_timeout callback of the remote object
-    def onViolation(self, id, key, value, completeness, timeout):
+    def onViolation(self, id, key, value, completeness, timeout, timestamp):
         if value != None:
-            message = {'id': id, 'data_source': key, 'value': value, 'completeness': completeness, 'timeOut': timeout}
+            message = {'id': id, 'data_source': key, 'value': value, 'completeness': completeness, 'timeOut': timeout, 'timestamp': timestamp }
             self.ws_on_violation.publish(json.dumps(message))
         # else due to timeout
         else:
-            message = {'id': id, 'data_source': key, 'value': None, 'completeness': completeness, 'timeOut': timeout}
+            message = {'id': id, 'data_source': key, 'value': None, 'completeness': completeness, 'timeOut': timeout, 'timestamp': timestamp}
             self.ws_on_violation.publish(json.dumps(message))
 

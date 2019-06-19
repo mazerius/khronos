@@ -15,12 +15,12 @@ import os
 class Client(object):
 
     # should be invoked when packets arrive within given constraints. Value is the value of the sensor data.
-    def on_next(self, value, completeness, timeout):
-        print(str(datetime.datetime.now()), "on_next with value:", value, ', timeout:', timeout, 'and completeness', completeness)
+    def on_next(self, value, completeness, timeout, timestamp):
+        print(str(datetime.datetime.now()), "on_next with value:", value, ', timeout:', timeout, 'and completeness', completeness, 'at timestamp', timestamp)
 
     # should be invoked when packets arrive outside given constraints. Value is the value of the sensor data.
-    def on_timeout(self, completeness, timeout):
-        print(str(datetime.datetime.now()), "on_timeout with timeout:", timeout, ', completeness', completeness)
+    def on_timeout(self, completeness, timeout, timestamp):
+        print(str(datetime.datetime.now()), "on_timeout with timeout:", timeout, ', completeness', completeness, 'at timestamp', timestamp)
 
 
 uri = ""

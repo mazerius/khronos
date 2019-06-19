@@ -116,5 +116,6 @@ api.add_resource(registerCompletenessRMI, '/registerCompletenessConstraintRMI/<s
 api.add_resource(registerTimeOutRMI, '/registerTimeoutRMI/<string:pid1>/<string:pid2>/<string:mac>/<string:measurement>/<string:timeout>/<string:remote_object_uri>')
 api.add_resource(registerCompleteness, '/registerCompletenessConstraint/<string:pid1>/<string:pid2>/<string:mac>/<string:measurement>/<string:constraint>/<string:threshold>')
 api.add_resource(registerTimeOut, '/registerTimeout/<string:pid1>/<string:pid2>/<string:mac>/<string:measurement>/<string:timeout>')
+print(datetime.datetime.now(), "| [Main]: Running on...", address, ":", port)
 app.run(host=address, port=port)
 
