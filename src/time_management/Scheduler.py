@@ -10,10 +10,11 @@ from src.application_management.Publisher import Publisher
 
 # invoked when a process times out, associated with an individual packet arrival
 # requirement is a static timeout or constraint
-#TODO: add onViolation if below constraint != None and < constraint.getThreshold()
-#TODO: requirement make superclass
-def onTimeout(requirement, completeness,  timeout, timestamp, updater, publisher, below_constraint = None):
+def onTimeout(requirement, completeness, timeout, updater, publisher, below_constraint = None):
     time.sleep(float(timeout))
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
+    timestamp = json.dumps(timestamp, indent=4, sort_keys=True)
+    timestamp = timestamp.strip('"')
     print(datetime.datetime.now(), '| [Scheduler]:', 'Timeout occurred prior packet arrival. Invoking onTimeout() on Updater.')
     if below_constraint != None and below_constraint[requirement.getCompleteness()] != None:
         if below_constraint[requirement.getCompleteness()] < requirement.getThreshold():
@@ -95,8 +96,8 @@ class Scheduler:
 
 
     # when timeout has occured, the scheduler waits for the next packet arrival before restarting a new timeout process.
-    def receiveData(self, arrival_time, timeGenerated, key, value, next_timeout, achieved_completeness_constraints, above_constraint, achieved_completeness_timeouts, timestamp):
-        print(datetime.datetime.now(), '| [Scheduler]:', 'Received data from:', key, ', at', arrival_time, ' with timestamp generated', timeGenerated)
+    def receiveData(self, arrival_time, time_generated, key, value, next_timeout, achieved_completeness_constraints, above_constraint, achieved_completeness_timeouts, timestamp):
+        print(datetime.datetime.now(), '| [Scheduler]:', 'Received data from:', key, ', at', arrival_time, ' with timestamp generated', time_generated)
         # check registered completeness constraints that are linked to received device data
         for constraint in self.constraints:
             if constraint.sameKey(key):
@@ -157,7 +158,7 @@ class Scheduler:
                 completeness = constraint.getCompleteness()
                 print(datetime.datetime.now(), '| [Scheduler]: Initiating new timeout Process with a timeout of', next_timeout[completeness], 'seconds.')
                 p = Process(target=onTimeout, args=(constraint,
-                                                    achieved_completeness_constraints[completeness], next_timeout[completeness], timestamp,
+                                                    achieved_completeness_constraints[completeness], next_timeout[completeness],
                                                     self.updater, self.publisher, above_constraint))
                 self.constraint_to_process[constraint.getID()] = p
                 p.start()
@@ -197,7 +198,7 @@ class Scheduler:
                                           achieved_completeness_timeouts[st.getTimeout()], float(st.getTimeout()),timestamp)
 
                 print(datetime.datetime.now(), '| [Scheduler]: Initiating new timeout Process with a timeout of', st.getTimeout(), 'seconds.')
-                p = Process(target=onTimeout, args=(st, achieved_completeness_timeouts[st.getTimeout()], float(st.getTimeout()), timestamp, self.updater, self.publisher))
+                p = Process(target=onTimeout, args=(st, achieved_completeness_timeouts[st.getTimeout()], float(st.getTimeout()), self.updater, self.publisher))
                 self.timeout_to_process[st.getID()] = p
                 p.start()
 

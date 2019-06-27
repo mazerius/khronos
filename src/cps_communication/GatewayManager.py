@@ -20,6 +20,7 @@ from src.storage.InfluxDBWriter import *
 os.chdir("..") #Go up one directory from working directory
 config_path = os.path.join(os.getcwd(), 'configuration')
 config_file = os.path.join(config_path, 'gm_config')
+tz_info = pytz.timezone('Europe/Brussels')
 with open(config_file) as json_data_file:
     data = json.load(json_data_file)
 
@@ -109,7 +110,8 @@ def connectToWebSocket():
                    if not stream_manager.getStreamByID(peripheral_id, mac) == None:
                        thisStream = stream_manager.getStreamByID(peripheral_id, mac)
                        timestamp = result_json['contents']['timestamp']
-                       time_to_write = datetime.datetime.utcfromtimestamp(1558356626234250/1000000.).strftime('%Y-%m-%dT%H:%M:%S.%f')
+                       # convert to local time by adding 2 hours
+                       time_to_write = datetime.datetime.utcfromtimestamp(timestamp/1000000).replace(tzinfo=pytz.timezone('UTC')).astimezone(tz_info).strftime('%Y-%m-%dT%H:%M:%S.%f')
                        # update timeliness / completeness stats
                        ready_to_be_published = thisStream.increment(timestamp, time_to_write)
                        if (ready_to_be_published):
