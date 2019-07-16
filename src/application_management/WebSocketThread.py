@@ -40,7 +40,8 @@ class WebSocketThread(object):
 class WebSocketServerThread(threading.Thread):
 
     def __init__(self, name, port, address):
-        threading.Thread.__init__(self)
+        super(WebSocketServerThread, self).__init__()
+        #threading.Thread.__init__(self)
         self.name = name
         self.port = port
         self.address = address

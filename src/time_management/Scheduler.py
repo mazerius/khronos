@@ -21,6 +21,8 @@ def onTimeout(requirement, completeness, timeout, updater, publisher, below_cons
             if requirement.getRemoteObject() != None:
                 updater.onViolation(requirement.getRemoteObject(), completeness, timeout, timestamp)
             else:
+                print(datetime.datetime.now(), '| [Scheduler]:',
+                      'Violation occurred prior packet arrival. Invoking onViolationt() on Publisher.')
                 publisher.onViolation(requirement.getID(), requirement.getDeviceKey(), None, completeness, timeout, timestamp)
         else:
             if requirement.getRemoteObject() != None:
@@ -44,9 +46,9 @@ class Scheduler:
     # both a StaticTimeout and the corresponding Process share the same ID.
     static_timeout_counter = 0
 
-    def __init__(self, updater, data_parser, network_monitor):
+    def __init__(self, updater, publisher, data_parser, network_monitor):
         self.updater = updater
-        self.publisher = Publisher()
+        self.publisher = publisher
         self.data_parser = data_parser
         self.data_parser.setScheduler(self)
         self.network_monitor = network_monitor
