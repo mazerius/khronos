@@ -48,3 +48,13 @@ class StreamManager:
         stream = self.getStreamByID(peripheral_id, device_id)
         stream.trackTimeoutForCompleteness(constraint)
 
+    def notifyTimeoutForConstraint(self, peripheral_id, device_id, constraint):
+        print(datetime.datetime.now(), '| [StreamManager]: notifying timeout for completeness constraint ' + constraint + ' for', peripheral_id + ':' + device_id)
+        stream = self.getStreamByID(peripheral_id, device_id)
+        return stream.notifyTimeoutForConstraint(constraint)
+
+    def notifyTimeoutForStaticTimeout(self, peripheral_id, device_id, timeout):
+        print(datetime.datetime.now(), '| [StreamManager]: notifying timeout for static timeout ' + timeout + ' for', peripheral_id + ':' + device_id)
+        stream = self.getStreamByID(peripheral_id, device_id)
+        return stream.notifyTimeoutForStaticTimeout(timeout)
+

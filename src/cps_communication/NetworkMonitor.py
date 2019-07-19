@@ -72,3 +72,18 @@ class NetworkMonitor:
         requests.put(self.gateway_URL + '/trackCompletenessConstraint' + '/' + device_mac + '/' + pid1 + '/' + pid2 + '/' + constraint)
 
 
+    def notifyTimeoutForConstraint(self, key, constraint):
+        constraint = str(constraint)
+        key = key.split(':')
+        pid1 = key[0].split('/')[0]
+        pid2 = key[0].split('/')[1]
+        device_mac = key[1].split('|')[0]
+        return requests.get(self.gateway_URL + '/notify-timeout-constraint' + '/' + device_mac + '/' + pid1 + '/' + pid2 + '/' + constraint)
+
+    def notifyTimeoutForStaticTimeout(self, key, timeout):
+        timeout = str(timeout)
+        key = key.split(':')
+        pid1 = key[0].split('/')[0]
+        pid2 = key[0].split('/')[1]
+        device_mac = key[1].split('|')[0]
+        return requests.get(self.gateway_URL + '/notify-timeout-static' + '/' + device_mac + '/' + pid1 + '/' + pid2 + '/' + timeout)

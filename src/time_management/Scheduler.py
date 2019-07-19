@@ -3,22 +3,29 @@ import time
 from multiprocessing import Process
 import json
 from src.application_management.CompletenessConstraint import CompletenessConstraint
-
 from src.application_management.StaticTimeout import StaticTimeout
 
 from src.application_management.Publisher import Publisher
 
 # invoked when a process times out, associated with an individual packet arrival
 # requirement is a static timeout or constraint
-def onTimeout(requirement, completeness, timeout, updater, publisher, below_constraint = None):
+def onTimeout(requirement, timeout, updater, publisher, network_monitor, below_constraint = None):
     time.sleep(float(timeout))
     timestamp = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
     timestamp = json.dumps(timestamp, indent=4, sort_keys=True)
     timestamp = timestamp.strip('"')
-    print(datetime.datetime.now(), '| [Scheduler]:', 'Timeout occurred prior packet arrival. Invoking onTimeout() on Updater.')
+    if (isinstance(requirement, CompletenessConstraint)):
+        completeness = network_monitor.notifyTimeoutForConstraint(requirement.getDeviceKey(), requirement.getCompleteness()).text
+        print('timeout completeness:' + completeness)
+    else:
+        completeness = network_monitor.notifyTimeoutForStaticTimeout(requirement.getDeviceKey(), requirement.getTimeout()).text
+        print('timeout completeness:' + completeness)
+
     if below_constraint != None and below_constraint[requirement.getCompleteness()] != None:
         if below_constraint[requirement.getCompleteness()] < requirement.getThreshold():
             if requirement.getRemoteObject() != None:
+                print(datetime.datetime.now(), '| [Scheduler]:',
+                      'Violation occurred prior packet arrival. Invoking onTimeout().')
                 updater.onViolation(requirement.getRemoteObject(), completeness, timeout, timestamp)
             else:
                 print(datetime.datetime.now(), '| [Scheduler]:',
@@ -26,8 +33,12 @@ def onTimeout(requirement, completeness, timeout, updater, publisher, below_cons
                 publisher.onViolation(requirement.getID(), requirement.getDeviceKey(), None, completeness, timeout, timestamp)
         else:
             if requirement.getRemoteObject() != None:
+                print(datetime.datetime.now(), '| [Scheduler]:',
+                      'Timeout occurred prior packet arrival. Invoking onTimeout() on Updater.')
                 updater.onTimeout(requirement.getRemoteObject(), completeness, timeout, timestamp)
             else:
+                print(datetime.datetime.now(), '| [Scheduler]:',
+                      'Timeout occurred prior packet arrival. Invoking onTimeout() on Publisher.')
                 publisher.onTimeout(requirement.getID(), requirement.getDeviceKey(), completeness, timeout, timestamp)
     else:
         if requirement.getRemoteObject() != None:
@@ -159,9 +170,8 @@ class Scheduler:
 
                 completeness = constraint.getCompleteness()
                 print(datetime.datetime.now(), '| [Scheduler]: Initiating new timeout Process with a timeout of', next_timeout[completeness], 'seconds.')
-                p = Process(target=onTimeout, args=(constraint,
-                                                    achieved_completeness_constraints[completeness], next_timeout[completeness],
-                                                    self.updater, self.publisher, above_constraint))
+                p = Process(target=onTimeout, args=(constraint, next_timeout[completeness],
+                                                    self.updater, self.publisher, self.network_monitor, above_constraint))
                 self.constraint_to_process[constraint.getID()] = p
                 p.start()
 
@@ -200,7 +210,7 @@ class Scheduler:
                                           achieved_completeness_timeouts[st.getTimeout()], float(st.getTimeout()),timestamp)
 
                 print(datetime.datetime.now(), '| [Scheduler]: Initiating new timeout Process with a timeout of', st.getTimeout(), 'seconds.')
-                p = Process(target=onTimeout, args=(st, achieved_completeness_timeouts[st.getTimeout()], float(st.getTimeout()), self.updater, self.publisher))
+                p = Process(target=onTimeout, args=(st, float(st.getTimeout()), self.updater, self.publisher, self.network_monitor))
                 self.timeout_to_process[st.getID()] = p
                 p.start()
 

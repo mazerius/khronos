@@ -1,10 +1,5 @@
 # responsible for publishing events on websockets, when instructed by the Scheduler.
-
-from src.application_management.WebSocketThread import WebSocketThread
 import json
-import os
-import requests
-
 
 
 class Publisher:

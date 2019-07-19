@@ -113,7 +113,6 @@ def acceptConnection(ws):
     publisher.addWebSocket(ws)
     while not ws.closed:
         message = ws.receive()
-        print('publishing')
         ws.send(message)
 
 print(datetime.datetime.now(), "| [Main]: Adding API resources...")

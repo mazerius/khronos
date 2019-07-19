@@ -343,7 +343,20 @@ def runRESTfulAPI():
             print(datetime.datetime.now(),'| [GatewayManager]: tracking completeness constraint for', peripheral_id + ':' + device_mac, 'with value:', constraint)
             stream_manager.trackCompletenessConstraint(peripheral_id, device_mac, constraint)
 
+    # enables Scheduler to notify the Stream manager that a timeout occurred for completeness, triggering statistics update.
+    class TimeoutOccurredForConstraintAPI(Resource):
+        def get(self, mac, pid1, pid2, constraint):
+            peripheral_id = pid1 + '/' + pid2
+            print(datetime.datetime.now(),'| [GatewayManager]: notifying timeout for', peripheral_id + ':' + mac + ' with constraint: ' + constraint)
+            return stream_manager.notifyTimeoutForConstraint(peripheral_id, mac, constraint)
 
+    # enables Scheduler to notify the Stream manager that a timeout occurred for static timeout, triggering statistics update.
+    class TimeoutOccurredForStaticTimeoutAPI(Resource):
+        def get(self, mac, pid1, pid2, timeout):
+            peripheral_id = pid1 + '/' + pid2
+            print(datetime.datetime.now(), '| [GatewayManager]: notifying timeout for',
+                  peripheral_id + ':' + mac + 'with static timeout: ' + timeout)
+            return stream_manager.notifyTimeoutForStaticTimeout(peripheral_id, mac, timeout)
 
     ############## Register #############
 
@@ -352,6 +365,8 @@ def runRESTfulAPI():
     api.add_resource(TrackCompletenessConstraintAPI, '/trackCompletenessConstraint/<string:device_mac>/<string:pid1>/<string:pid2>/<string:constraint>')
     api.add_resource(DataSourcesAPI, '/publishers')
     api.add_resource(ActivateDataSourceAPI, '/activate-publisher/<string:pid1>/<string:pid2>/<string:mac>/<string:measurement>')
+    api.add_resource(TimeoutOccurredForConstraintAPI, '/notify-timeout-constraint/<string:mac>/<string:pid1>/<string:pid2>/<string:constraint>')
+    api.add_resource(TimeoutOccurredForStaticTimeoutAPI, '/notify-timeout-static/<string:mac>/<string:pid1>/<string:pid2>/<string:timeout>')
 
 
     # CPS cps_communication / devices resources
