@@ -1,5 +1,6 @@
 import math
 import datetime
+from functools import reduce
 
 
 
@@ -141,7 +142,11 @@ class Stream:
             self.moving_average_achieved_completenesses[completeness].append(ma_achieved_completeness)
 
 
-    # # adds achieved completeness upon packet arrival for given constraint, storing up to self.window_size entries.
+    def average(self, lst):
+        return reduce(lambda a, b: a + b, lst) / len(lst)
+
+
+            # # adds achieved completeness upon packet arrival for given constraint, storing up to self.window_size entries.
     # def addMovingAverageAboveConstraint(self, completeness, ma_achieved_completeness, timestamp):
     #     if len(self.moving_average_above_constraint[completeness]) < self.window_size:
     #         self.moving_average_above_constraint[completeness].append((ma_achieved_completeness, timestamp))
@@ -163,6 +168,8 @@ class Stream:
                 moving_aves.append(moving_ave)
         if len(moving_aves) > 0:
             self.moving_average_accuracy_constraints[constraint] = moving_aves[0]
+        else:
+            self.moving_average_accuracy_constraints[constraint] = self.average(values)
 
     # updates the moving average for achieved completeness for given static timeout.
     def updateAchievedCompletenessForTimeout(self, timeout):
@@ -178,7 +185,8 @@ class Stream:
                 moving_aves.append(moving_ave)
         if len(moving_aves) > 0:
             self.moving_average_accuracy_timeouts[timeout] = moving_aves[0]
-
+        else:
+            self.moving_average_accuracy_timeouts[timeout] = self.average(values)
 
     # updates the moving average for the ratio for which the achieved completeness is below the constraint.
     def updateMovingAverageAchievedCompleteness(self, constraint):
@@ -194,6 +202,9 @@ class Stream:
                 moving_aves.append(moving_ave)
         if len(moving_aves) > 0:
             self.moving_average_achieved_completeness[constraint] = moving_aves[0]
+        else:
+            self.moving_average_accuracy_completeness[constraint] = self.average(values)
+
 
     # updates the moving average for the ratio for which the achieved completeness is below the constraint.
     def updateMovingAverageAboveConstraint(self, constraint):
@@ -212,6 +223,8 @@ class Stream:
                 moving_aves.append(moving_ave)
         if len(moving_aves) > 0:
             self.above_constraint[constraint] = moving_aves[0]
+        else:
+            self.above_constraint[constraint] = self.average(values)
 
 
     # invoked upon packet arrival to update all statistics and computes next timeout prediction(s)
@@ -263,15 +276,15 @@ class Stream:
                             accuracy = 1
                             self.addAccuracyForConstraint(accuracy, key)
                             # if enough data has arrived, compute moving averages
-                            if len(self.accuracies_constraints[key]) >= self.window_size:
-                                self.updateAchievedCompletenessForConstraint(key)
-                                self.addMovingAverageAccuracyForConstraint(key, self.moving_average_accuracy_constraints[key])
-                                # if enough data has arrived, compute moving averages
-                                if len(self.moving_average_accuracies_constraints[key]) >= self.window_size:
-                                    self.updateMovingAverageAchievedCompleteness(key)
-                                    self.addMovingAverageAchievedCompleteness(key, self.moving_average_achieved_completeness[key])
-                                    if len(self.moving_average_achieved_completenesses[key]) >= self.window_size:
-                                        self.updateMovingAverageAboveConstraint(key)
+                            #if len(self.accuracies_constraints[key]) >= self.window_size:
+                            self.updateAchievedCompletenessForConstraint(key)
+                            self.addMovingAverageAccuracyForConstraint(key, self.moving_average_accuracy_constraints[key])
+                            # if enough data has arrived, compute moving averages
+                            if len(self.moving_average_accuracies_constraints[key]) >= self.window_size:
+                                self.updateMovingAverageAchievedCompleteness(key)
+                                self.addMovingAverageAchievedCompleteness(key, self.moving_average_achieved_completeness[key])
+                                if len(self.moving_average_achieved_completenesses[key]) >= self.window_size:
+                                    self.updateMovingAverageAboveConstraint(key)
                         self.timeout_occurred_constraint[key] = False
                         self.completeness_to_timeout[key] = new_timeout
                 # update accuracy and achieved completeness for each registered static timeout
@@ -328,10 +341,11 @@ class Stream:
 
     def notifyTimeoutForConstraint(self, constraint):
         constraint = float(constraint)
-        self.timeout_occurred_constraint[constraint] = True
-        self.addAccuracyForConstraint(0, constraint)
-        # if enough data has arrived, compute moving averages
-        if len(self.accuracies_constraints[constraint]) >= self.window_size:
+        if not self.timeout_occurred_constraint[constraint]:
+            self.timeout_occurred_constraint[constraint] = True
+            self.addAccuracyForConstraint(0, constraint)
+            # if enough data has arrived, compute moving averages
+            #if len(self.accuracies_constraints[constraint]) >= self.window_size:
             self.updateAchievedCompletenessForConstraint(constraint)
             self.addMovingAverageAccuracyForConstraint(constraint, self.moving_average_accuracy_constraints[constraint])
             # if enough data has arrived, compute moving averages
@@ -345,9 +359,9 @@ class Stream:
 
     def notifyTimeoutForStaticTimeout(self, timeout):
         timeout = float(timeout)
-        self.timeout_occurred_static[timeout] = True
-        self.addAccuracyforStaticTimeout(0, timeout)
-        if len(self.accuracies_static_timeout[timeout]) >= self.window_size:
+        if not self.timeout_occurred_timeout[timeout]:
+            self.timeout_occurred_static[timeout] = True
+            self.addAccuracyforStaticTimeout(0, timeout)
             self.updateAchievedCompletenessForTimeout(timeout)
         return self.moving_average_accuracy_timeouts[timeout]
 
