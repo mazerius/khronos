@@ -15,36 +15,36 @@ def onTimeout(requirement, timeout, updater, publisher, network_monitor, below_c
     timestamp = json.dumps(timestamp, indent=4, sort_keys=True)
     timestamp = timestamp.strip('"')
     if (isinstance(requirement, CompletenessConstraint)):
-        completeness = network_monitor.notifyTimeoutForConstraint(requirement.getDeviceKey(), requirement.getCompleteness()).text
+        completeness = network_monitor.notifyTimeoutForConstraint(requirement.getDeviceKey(), requirement.getCompleteness().rstrip()).text
         print('timeout completeness:' + completeness)
     else:
         completeness = network_monitor.notifyTimeoutForStaticTimeout(requirement.getDeviceKey(), requirement.getTimeout()).text
         print('timeout completeness:' + completeness)
 
     if below_constraint != None and below_constraint[requirement.getCompleteness()] != None:
-        if below_constraint[requirement.getCompleteness()] < requirement.getThreshold():
+        if below_constraint[requirement.getCompleteness().rstrip()] < requirement.getThreshold():
             if requirement.getRemoteObject() != None:
                 print(datetime.datetime.now(), '| [Scheduler]:',
                       'Violation occurred prior packet arrival. Invoking onTimeout().')
-                updater.onViolation(requirement.getRemoteObject(), completeness, timeout, timestamp)
+                updater.onViolation(requirement.getRemoteObject(), completeness.rstrip(), timeout, timestamp)
             else:
                 print(datetime.datetime.now(), '| [Scheduler]:',
                       'Violation occurred prior packet arrival. Invoking onViolationt() on Publisher.')
-                publisher.onViolation(requirement.getID(), requirement.getDeviceKey(), None, completeness, timeout, timestamp)
+                publisher.onViolation(requirement.getID(), requirement.getDeviceKey(), None, completeness.rstrip(), timeout, timestamp)
         else:
             if requirement.getRemoteObject() != None:
                 print(datetime.datetime.now(), '| [Scheduler]:',
                       'Timeout occurred prior packet arrival. Invoking onTimeout() on Updater.')
-                updater.onTimeout(requirement.getRemoteObject(), completeness, timeout, timestamp)
+                updater.onTimeout(requirement.getRemoteObject(), completeness.rstrip(), timeout, timestamp)
             else:
                 print(datetime.datetime.now(), '| [Scheduler]:',
                       'Timeout occurred prior packet arrival. Invoking onTimeout() on Publisher.')
-                publisher.onTimeout(requirement.getID(), requirement.getDeviceKey(), completeness, timeout, timestamp)
+                publisher.onTimeout(requirement.getID(), requirement.getDeviceKey(), completeness.rstrip(), timeout, timestamp)
     else:
         if requirement.getRemoteObject() != None:
-            updater.onTimeout(requirement.getRemoteObject(), completeness, timeout, timestamp)
+            updater.onTimeout(requirement.getRemoteObject(), completeness.rstrip(), timeout, timestamp)
         else:
-            publisher.onTimeout(requirement.getID(), requirement.getDeviceKey(), completeness, timeout, timestamp)
+            publisher.onTimeout(requirement.getID(), requirement.getDeviceKey(), completeness.rstrip(), timeout, timestamp)
 
 # Responsible for coordinating callback methods of (remote) application objects,
 # based on packet arrival times and timeouts.
