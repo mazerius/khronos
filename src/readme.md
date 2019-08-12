@@ -52,7 +52,7 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## References
 
-[1]. Waiting for proceedings. 
+[1]. Peros, Stefanos & Stéphane, Delbruel & Michiels, Sam & Joosen, Wouter & Hughes, Danny. (2019). Khronos: Middleware for Simplified Time Management in CPS. 127-138. 10.1145/3328905.3329507. 
 
 ## Data Sets
 The data sets used for the evaluation of Khronos, discussed in [1], can be downloaded from: https://ufile.io/g3tvehcw
