@@ -1,6 +1,6 @@
 # Khronos: a middleware for simplified time management in Cyber Physical Systems.
 
-This project is the software implementation of Khronos, the middleware proposed in [1] and presented at the conference DEBS2019. 
+This project is the software implementation of Khronos, the middleware proposed in [1] and presented at the conference DEBS2019, where it received the best research paper award. 
 Khronos allows the developers to precisely trade off timeliness versus completeness of the data produced by the underlying CPS infrastructure.
 The middleware shields the application developer from the burden of manually specifying timeouts for each data stream, by supporting the specification of completeness constraints: the minimum fraction of packets expected to have arrived from a device data stream.
 
